@@ -9,6 +9,7 @@ require('dotenv').config();
 const DocumentProcessor = require('./src/services/documentProcessor');
 const EmbeddingService = require('./src/services/embeddingService');
 const RAGService = require('./src/services/ragService');
+const databaseService = require('./src/services/databaseService');
 const uploadRoutes = require('./src/routes/upload');
 const ragRoutes = require('./src/routes/rag');
 
@@ -72,6 +73,20 @@ class RAGServer {
     try {
       console.log('🔧 Iniciando configuração de serviços...');
       
+      // Tentar conectar ao MongoDB Atlas (não-bloqueante)
+      console.log('🗄️ Tentando conectar ao MongoDB Atlas...');
+      try {
+        const connected = await databaseService.connect();
+        if (connected) {
+          console.log('✅ MongoDB conectado com sucesso');
+        } else {
+          console.log('⚠️ Servidor iniciando sem MongoDB - configure MONGODB_URI no Render');
+        }
+      } catch (dbError) {
+        console.warn('⚠️ Falha na conexão MongoDB:', dbError.message);
+        console.warn('⚠️ Servidor continuando sem banco de dados');
+      }
+      
       // Inicializar serviços
       console.log('📦 Criando EmbeddingService...');
       this.embeddingService = new EmbeddingService();
@@ -87,7 +102,7 @@ class RAGServer {
       
       console.log('✅ Serviços inicializados com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao inicializar serviços:', error.message);
+      console.error('❌ Erro crítico ao inicializar serviços:', error.message);
       console.error('Stack trace:', error.stack);
       process.exit(1);
     }
@@ -100,12 +115,38 @@ class RAGServer {
     });
 
     // Health check
-    this.app.get('/health', (req, res) => {
-      res.json({ 
-        status: 'ok', 
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime()
-      });
+    this.app.get('/health', async (req, res) => {
+      try {
+        let dbHealth;
+        try {
+          dbHealth = await databaseService.healthCheck();
+        } catch (dbError) {
+          dbHealth = { 
+            status: 'disconnected', 
+            message: 'MongoDB não configurado ou inacessível',
+            note: 'Configure MONGODB_URI nas variáveis de ambiente do Render'
+          };
+        }
+        
+        res.json({ 
+          status: 'ok', 
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime(),
+          database: dbHealth,
+          services: {
+            embedding: this.embeddingService ? 'ready' : 'not_initialized',
+            rag: this.ragService ? 'ready' : 'not_initialized'
+          }
+        });
+      } catch (error) {
+        res.json({
+          status: 'partial',
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime(),
+          database: { status: 'error', message: 'Health check failed' },
+          error: error.message
+        });
+      }
     });
 
     // Rotas da API
@@ -159,12 +200,32 @@ initializeServer().catch(error => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('🛑 Recebido SIGTERM, encerrando servidor...');
+  try {
+    if (databaseService.isConnected) {
+      await databaseService.disconnect();
+      console.log('✅ MongoDB desconectado com sucesso');
+    } else {
+      console.log('ℹ️ MongoDB já estava desconectado');
+    }
+  } catch (error) {
+    console.warn('⚠️ Erro ao desconectar MongoDB:', error.message);
+  }
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('🛑 Recebido SIGINT, encerrando servidor...');
+  try {
+    if (databaseService.isConnected) {
+      await databaseService.disconnect();
+      console.log('✅ MongoDB desconectado com sucesso');
+    } else {
+      console.log('ℹ️ MongoDB já estava desconectado');
+    }
+  } catch (error) {
+    console.warn('⚠️ Erro ao desconectar MongoDB:', error.message);
+  }
   process.exit(0);
 });
