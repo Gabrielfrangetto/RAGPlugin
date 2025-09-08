@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlugChat RAG - Sistema de Conhecimento</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            margin-bottom: 40px;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .stats h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .test-section {
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 2px solid #eee;
+        }
+
+        .test-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .test-result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 PlugChat RAG</h1>
+            <p>Sistema de Conhecimento Inteligente</p>
+        </div>
+        
+        <div class="content">
+            <!-- Seção de Upload -->
+            <div class="upload-section">
+                <h2>📁 Upload de Documentos</h2>
+                <p>Faça upload de documentos para treinar o sistema de IA</p>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <p>Arraste arquivos aqui ou clique para selecionar</p>
+                    <p><small>Suportados: PDF, DOCX, Excel, TXT, HTML, JSON</small></p>
+                    <input type="file" id="fileInput" class="file-input" multiple accept=".pdf,.docx,.xlsx,.xls,.txt,.html,.json">
+                </div>
+                
+                <div id="uploadStatus"></div>
+            </div>
+            
+            <!-- Estatísticas -->
+            <div class="stats" id="statsSection">
+                <h3>📊 Estatísticas do Sistema</h3>
+                <div id="statsContent">
+                    <div class="stat-item">
+                        <span>Carregando...</span>
+                        <span class="loading"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Seção de Teste -->
+            <div class="test-section">
+                <h2>🧪 Testar Sistema RAG</h2>
+                <p>Faça uma pergunta para testar o sistema</p>
+                
+                <input type="text" id="testQuery" class="test-input" placeholder="Digite sua pergunta aqui...">
+                <button id="testBtn" class="btn">🔍 Consultar</button>
+                
+                <div id="testResult" class="test-result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class RAGWebApp {
+            constructor() {
+                this.initializeEventListeners();
+                this.loadStats();
+            }
+
+            initializeEventListeners() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('fileInput');
+                const testBtn = document.getElementById('testBtn');
+                const testQuery = document.getElementById('testQuery');
+
+                // Upload area events
+                uploadArea.addEventListener('click', () => fileInput.click());
+                uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
+                uploadArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                uploadArea.addEventListener('drop', this.handleDrop.bind(this));
+                
+                fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+                
+                // Test events
+                testBtn.addEventListener('click', this.testRAG.bind(this));
+                testQuery.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.testRAG();
+                });
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                document.getElementById('uploadArea').classList.add('dragover');
+            }
+
+            handleDragLeave(e) {
+                e.preventDefault();
+                document.getElementById('uploadArea').classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                document.getElementById('uploadArea').classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                this.uploadFiles(files);
+            }
+
+            handleFileSelect(e) {
+                const files = e.target.files;
+                this.uploadFiles(files);
+            }
+
+            async uploadFiles(files) {
+                const statusDiv = document.getElementById('uploadStatus');
+                
+                for (let file of files) {
+                    try {
+                        statusDiv.innerHTML = `<div class="status info">📤 Enviando: ${file.name}...</div>`;
+                        
+                        const formData = new FormData();
+                        formData.append('document', file);
+                        
+                        const response = await fetch('/api/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            statusDiv.innerHTML = `<div class="status success">✅ ${file.name} processado com sucesso! (${result.chunks} chunks)</div>`;
+                        } else {
+                            statusDiv.innerHTML = `<div class="status error">❌ Erro ao processar ${file.name}: ${result.error}</div>`;
+                        }
+                        
+                    } catch (error) {
+                        statusDiv.innerHTML = `<div class="status error">❌ Erro ao enviar ${file.name}: ${error.message}</div>`;
+                    }
+                }
+                
+                // Atualizar estatísticas
+                setTimeout(() => this.loadStats(), 1000);
+            }
+
+            async loadStats() {
+                try {
+                    const response = await fetch('/api/upload/stats');
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        const statsContent = document.getElementById('statsContent');
+                        statsContent.innerHTML = `
+                            <div class="stat-item">
+                                <span>📚 Documentos</span>
+                                <span>${result.stats.documents}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>📄 Total de Chunks</span>
+                                <span>${result.stats.totalChunks}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>🤖 Modelo</span>
+                                <span>${result.stats.modelName}</span>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar estatísticas:', error);
+                }
+            }
+
+            async testRAG() {
+                const query = document.getElementById('testQuery').value.trim();
+                const testBtn = document.getElementById('testBtn');
+                const testResult = document.getElementById('testResult');
+                
+                if (!query) {
+                    alert('Digite uma pergunta primeiro!');
+                    return;
+                }
+                
+                try {
+                    testBtn.disabled = true;
+                    testBtn.innerHTML = '<span class="loading"></span> Consultando...';
+                    
+                    const response = await fetch('/api/rag/query', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ query })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    testResult.style.display = 'block';
+                    
+                    if (result.success) {
+                        testResult.innerHTML = `
+🤖 Resposta: ${result.suggestion}
+
+📊 Confiança: ${(result.confidence * 100).toFixed(1)}%
+📄 Chunks usados: ${result.metadata?.chunksUsed || 0}
+⏰ Processado em: ${new Date(result.metadata?.processedAt).toLocaleTimeString()}
+                        `;
+                    } else {
+                        testResult.innerHTML = `❌ Erro: ${result.error}`;
+                    }
+                    
+                } catch (error) {
+                    testResult.style.display = 'block';
+                    testResult.innerHTML = `❌ Erro de conexão: ${error.message}`;
+                } finally {
+                    testBtn.disabled = false;
+                    testBtn.innerHTML = '🔍 Consultar';
+                }
+            }
+        }
+
+        // Inicializar aplicação
+        document.addEventListener('DOMContentLoaded', () => {
+            new RAGWebApp();
+        });
+    </script>
+</body>
+</html>
