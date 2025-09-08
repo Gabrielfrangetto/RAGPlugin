@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: plugchat-rag-webapp
+    env: node
+    plan: starter
+    buildCommand: npm ci --only=production
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://plugchat.com,chrome-extension://*
+      - key: MAX_FILE_SIZE
+        value: 52428800
+      - key: MAX_FILES_PER_UPLOAD
+        value: 10
+    disk:
+      name: rag-data
+      mountPath: /app/data
+      sizeGB: 1
