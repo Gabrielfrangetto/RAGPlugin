@@ -3,7 +3,7 @@ services:
     name: plugchat-rag-webapp
     env: node
     plan: starter
-    buildCommand: npm ci --only=production
+    buildCommand: npm install --only=production
     startCommand: npm start
     envVars:
       - key: NODE_ENV

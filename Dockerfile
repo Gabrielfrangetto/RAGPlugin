@@ -1,20 +1,17 @@
-# Use Node.js LTS
-FROM node:20-alpine
+# Use Node.js LTS with glibc for onnxruntime compatibility
+FROM node:20-slim
 
 # Instalar dependências do sistema
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
-    cairo-dev \
-    jpeg-dev \
-    pango-dev \
-    musl-dev \
-    giflib-dev \
-    pixman-dev \
-    pangomm-dev \
-    libjpeg-turbo-dev \
-    freetype-dev
+    libcairo2-dev \
+    libjpeg-dev \
+    libpango1.0-dev \
+    libgif-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Criar diretório da aplicação
 WORKDIR /app
